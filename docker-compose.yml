@@ -1,0 +1,67 @@
+version: "3"
+
+services:
+    # image project
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        depends_on:
+            - redis
+        networks:
+            - agt
+
+    # nginx
+    nginx:
+        image: nginx:alpine
+        restart: unless-stopped
+        ports:
+            - "8989:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx/:/etc/nginx/conf.d/
+        networks:
+            - agt
+
+    # db postgres
+    db:
+        image: postgres:13
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-laravel}
+            POSTGRES_USER: ${DB_USERNAME:-root}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
+        volumes:
+            - ./.docker/postgres/dbdata:/var/lib/postgresql/data
+        ports:
+            - "8041:5432"
+        networks:
+            - agt
+
+    # PGAdmin
+    pgadmin:
+        image: dpage/pgadmin4
+        restart: unless-stopped
+        environment:
+            PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-lucasenna95@gmail.com}
+            PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+        ports:
+            - "8042:80"
+        depends_on:
+            - db
+        networks:
+            - agt
+
+    # redis
+    redis:
+        image: redis:latest
+        networks:
+            - agt
+
+networks:
+    agt:
+        driver: bridge
